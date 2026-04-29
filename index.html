@@ -1,0 +1,1196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>🐟 摸鱼工坊 - Slacking Factory</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: linear-gradient(135deg, #FFF8E7 0%, #FFE4B5 100%);
+            font-family: 'Segoe UI', 'Microsoft YaHei', Arial, sans-serif;
+            touch-action: none;
+        }
+
+        #gameCanvas {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #FFFAF0;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            border-radius: 20px;
+        }
+
+        /* HUD */
+        #hud {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+            pointer-events: none;
+        }
+
+        .hud-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .hearts {
+            display: flex;
+            gap: 5px;
+        }
+
+        .heart {
+            font-size: 24px;
+        }
+
+        #score {
+            color: #FFD700;
+            font-size: 28px;
+        }
+
+        #timer {
+            color: #4CAF50;
+            font-size: 24px;
+            min-width: 60px;
+            text-align: right;
+        }
+
+        #timer.warning {
+            color: #FF9800;
+            animation: pulse 0.5s infinite;
+        }
+
+        #timer.danger {
+            color: #f44336;
+            animation: pulse 0.3s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        /* Combo 提示 */
+        #combo {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 32px;
+            font-weight: bold;
+            color: #FF6B6B;
+            text-shadow: 0 2px 10px rgba(255, 107, 107, 0.5);
+            z-index: 101;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #combo.show {
+            animation: comboShow 0.5s ease-out;
+        }
+
+        @keyframes comboShow {
+            0% {
+                opacity: 0;
+                transform: translateX(-50%) scale(0.5);
+            }
+            50% {
+                opacity: 1;
+                transform: translateX(-50%) scale(1.2);
+            }
+            100% {
+                opacity: 1;
+                transform: translateX(-50%) scale(1);
+            }
+        }
+
+        /* 任务提示 */
+        #taskHint {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            z-index: 99;
+            pointer-events: none;
+        }
+
+        /* 控制栏 */
+        #controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            z-index: 100;
+        }
+
+        .control-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+        }
+
+        .control-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.25);
+        }
+
+        .control-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* 开始/结束屏幕 */
+        .screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+        }
+
+        .screen.hidden {
+            display: none;
+        }
+
+        .title {
+            font-size: clamp(36px, 8vw, 72px);
+            font-weight: 900;
+            color: #fff;
+            text-shadow: 0 0 30px rgba(255, 215, 0, 0.6);
+            margin-bottom: 20px;
+        }
+
+        .subtitle {
+            font-size: clamp(16px, 4vw, 24px);
+            color: #FFD700;
+            margin-bottom: 40px;
+        }
+
+        .btn {
+            padding: 15px 40px;
+            font-size: 22px;
+            font-weight: bold;
+            color: white;
+            background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%);
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.6);
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        #finalScore {
+            font-size: 48px;
+            color: #FFD700;
+            margin: 20px 0;
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            #hud {
+                padding: 10px 15px;
+            }
+            .hud-item {
+                font-size: 16px;
+            }
+            #score {
+                font-size: 22px;
+            }
+            #taskHint {
+                font-size: 16px;
+                padding: 12px 25px;
+                bottom: 80px;
+            }
+            .control-btn {
+                width: 45px;
+                height: 45px;
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- HUD -->
+    <div id="hud">
+        <div class="hud-item">
+            <div class="hearts" id="hearts">
+                <span class="heart">❤️</span>
+                <span class="heart">❤️</span>
+                <span class="heart">❤️</span>
+            </div>
+        </div>
+        <div class="hud-item">
+            <span>得分:</span>
+            <span id="score">0</span>
+        </div>
+        <div class="hud-item">
+            <span id="timer">30s</span>
+        </div>
+    </div>
+
+    <!-- Combo 提示 -->
+    <div id="combo"></div>
+
+    <!-- 任务提示 -->
+    <div id="taskHint">点击开始游戏</div>
+
+    <!-- 控制栏 -->
+    <div id="controls">
+        <button class="control-btn" id="soundBtn" title="音效">🔊</button>
+        <button class="control-btn" id="pauseBtn" title="暂停">⏸</button>
+    </div>
+
+    <!-- 开始屏幕 -->
+    <div id="startScreen" class="screen">
+        <h1 class="title">🐟 摸鱼工坊</h1>
+        <p class="subtitle">Slacking Factory</p>
+        <button class="btn" onclick="startGame()">开始摸鱼</button>
+    </div>
+
+    <!-- 游戏结束屏幕 -->
+    <div id="gameOverScreen" class="screen hidden">
+        <h1 class="title">游戏结束</h1>
+        <div id="finalScore">0</div>
+        <p class="subtitle">你是摸鱼大师！</p>
+        <button class="btn" onclick="restartGame()">再摸一次</button>
+    </div>
+
+    <script>
+        // ==================== 粒子系统 ====================
+        const particles = [];
+        const floatingTexts = [];
+
+        function createParticles(x, y, color, count = 10) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x, y,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8 - 3,
+                    life: 1.0,
+                    decay: 0.02 + Math.random() * 0.02,
+                    color,
+                    size: 2 + Math.random() * 4
+                });
+            }
+        }
+
+        function showFloatingText(x, y, text, color = '#FFD700') {
+            floatingTexts.push({ x, y, text, color, life: 1.0 });
+        }
+
+        function updateParticles(deltaTime) {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.2; // 重力
+                p.life -= p.decay;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+            for (let i = floatingTexts.length - 1; i >= 0; i--) {
+                const ft = floatingTexts[i];
+                ft.y -= 1.5;
+                ft.life -= 0.02;
+                if (ft.life <= 0) floatingTexts.splice(i, 1);
+            }
+        }
+
+        function drawParticles(ctx) {
+            particles.forEach(p => {
+                ctx.save();
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+            floatingTexts.forEach(ft => {
+                ctx.save();
+                ctx.globalAlpha = ft.life;
+                ctx.fillStyle = ft.color;
+                ctx.font = 'bold 28px Arial';
+                ctx.textAlign = 'center';
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 3;
+                ctx.strokeText(ft.text, ft.x, ft.y);
+                ctx.fillText(ft.text, ft.x, ft.y);
+                ctx.restore();
+            });
+        }
+
+        // ==================== 配置 ====================
+        const CONFIG = {
+            canvasWidth: 800,
+            canvasHeight: 600,
+            taskDuration: 30, // 每个任务30秒
+            maxLives: 3
+        };
+
+        // ==================== 全局变量 ====================
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let gameState = 'start'; // 'start' | 'playing' | 'paused' | 'gameover'
+        let score = 0;
+        let lives = CONFIG.maxLives;
+        let combo = 0;
+        let currentTask = null;
+        let taskTimer = 0;
+        let lastTime = 0;
+        let soundEnabled = true;
+        let images = {}; // 存储加载的图片
+
+        // 任务定义
+        const TASKS = [
+            {
+                id: 'cracker',
+                name: '给苏打饼干扎孔',
+                emoji: '🍪',
+                targetHoles: 16,
+                init: function() {
+                    this.holes = [];
+                    this.targetHoles = 16;
+                },
+                check: function(x, y) {
+                    // 检查是否在饼干范围内
+                    const cx = CONFIG.canvasWidth / 2;
+                    const cy = CONFIG.canvasHeight / 2;
+                    const size = 200;
+                    if (Math.abs(x - cx) < size / 2 && Math.abs(y - cy) < size / 2) {
+                        this.holes.push({ x, y });
+                        playSound('pop');
+                        createParticles(x, y, '#F5DEB3', 5); // 面粉粒子
+                        return this.holes.length >= this.targetHoles;
+                    }
+                    return false;
+                },
+                draw: function(ctx) {
+                    const cx = CONFIG.canvasWidth / 2;
+                    const cy = CONFIG.canvasHeight / 2;
+                    const size = 200;
+                    
+                    // 饼干阴影
+                    ctx.fillStyle = 'rgba(0,0,0,0.1)';
+                    ctx.beginPath();
+                    ctx.ellipse(cx + 3, cy + size/2 + 10, size/2, 15, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // 饼干主体
+                    const grad = ctx.createLinearGradient(cx - size/2, cy - size/2, cx + size/2, cy + size/2);
+                    grad.addColorStop(0, '#FAEBD7');
+                    grad.addColorStop(0.5, '#F5DEB3');
+                    grad.addColorStop(1, '#DEB887');
+                    ctx.fillStyle = grad;
+                    ctx.fillRect(cx - size/2, cy - size/2, size, size);
+                    
+                    // 饼干边框
+                    ctx.strokeStyle = '#D2B48C';
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(cx - size/2, cy - size/2, size, size);
+                    
+                    // 饼干纹理（细小点）
+                    ctx.fillStyle = 'rgba(210, 180, 140, 0.3)';
+                    for (let i = 0; i < 20; i++) {
+                        const tx = cx - size/2 + 10 + (i % 5) * 45;
+                        const ty = cy - size/2 + 10 + Math.floor(i / 5) * 50;
+                        ctx.beginPath();
+                        ctx.arc(tx, ty, 2, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    
+                    // 绘制已扎的孔
+                    this.holes.forEach(hole => {
+                        // 孔的阴影
+                        ctx.fillStyle = '#8B7355';
+                        ctx.beginPath();
+                        ctx.arc(hole.x, hole.y, 6, 0, Math.PI * 2);
+                        ctx.fill();
+                        // 孔的内部
+                        ctx.fillStyle = '#705e47';
+                        ctx.beginPath();
+                        ctx.arc(hole.x, hole.y, 4, 0, Math.PI * 2);
+                        ctx.fill();
+                    });
+                    
+                    // 进度提示
+                    ctx.fillStyle = '#333';
+                    ctx.font = 'bold 22px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`${this.holes.length}/${this.targetHoles}`, cx, cy + size/2 + 35);
+                }
+            },
+            {
+                id: 'cookie',
+                name: '给曲奇饼干点巧克力豆',
+                emoji: '🍫',
+                targetChips: 12,
+                init: function() {
+                    this.chips = [];
+                    this.targetChips = 12;
+                },
+                check: function(x, y) {
+                    const cx = CONFIG.canvasWidth / 2;
+                    const cy = CONFIG.canvasHeight / 2;
+                    const radius = 100;
+                    const dist = Math.hypot(x - cx, y - cy);
+                    
+                    if (dist < radius) {
+                        // 检查是否与已有巧克力豆重叠
+                        const overlap = this.chips.some(chip => 
+                            Math.hypot(chip.x - x, chip.y - y) < 15
+                        );
+                        if (!overlap) {
+                            this.chips.push({ x, y });
+                            playSound('plop');
+                            createParticles(x, y, '#3E2723', 3); // 巧克力粒子
+                            return this.chips.length >= this.targetChips;
+                        }
+                    }
+                    return false;
+                },
+                draw: function(ctx) {
+                    const cx = CONFIG.canvasWidth / 2;
+                    const cy = CONFIG.canvasHeight / 2;
+                    const radius = 100;
+                    
+                    // 曲奇阴影
+                    ctx.fillStyle = 'rgba(0,0,0,0.1)';
+                    ctx.beginPath();
+                    ctx.ellipse(cx + 3, cy + radius + 5, radius, 15, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // 曲奇主体
+                    const grad = ctx.createRadialGradient(cx - 20, cy - 20, 10, cx, cy, radius);
+                    grad.addColorStop(0, '#E8A03E');
+                    grad.addColorStop(0.5, '#D2691E');
+                    grad.addColorStop(1, '#A0522D');
+                    ctx.fillStyle = grad;
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // 曲奇边缘
+                    ctx.strokeStyle = '#8B4513';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+                    ctx.stroke();
+                    
+                    // 绘制巧克力豆
+                    this.chips.forEach(chip => {
+                        // 巧克力豆阴影
+                        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                        ctx.beginPath();
+                        ctx.arc(chip.x + 1, chip.y + 1, 7, 0, Math.PI * 2);
+                        ctx.fill();
+                        // 巧克力豆
+                        const chipGrad = ctx.createRadialGradient(chip.x - 2, chip.y - 2, 1, chip.x, chip.y, 7);
+                        chipGrad.addColorStop(0, '#5D4037');
+                        chipGrad.addColorStop(1, '#3E2723');
+                        ctx.fillStyle = chipGrad;
+                        ctx.beginPath();
+                        ctx.arc(chip.x, chip.y, 6, 0, Math.PI * 2);
+                        ctx.fill();
+                        // 高光
+                        ctx.fillStyle = 'rgba(255,255,255,0.3)';
+                        ctx.beginPath();
+                        ctx.arc(chip.x - 2, chip.y - 2, 2, 0, Math.PI * 2);
+                        ctx.fill();
+                    });
+                    
+                    // 进度提示
+                    ctx.fillStyle = '#333';
+                    ctx.font = 'bold 22px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`${this.chips.length}/${this.targetChips}`, cx, cy + radius + 35);
+                }
+            },
+            {
+                id: 'strawberry',
+                name: '给草莓去籽',
+                emoji: '🍓',
+                targetSeeds: 20,
+                init: function() {
+                    this.seeds = [];
+                    this.removedSeeds = 0;
+                    this.targetSeeds = 20;
+                    // 生成随机籽位置
+                    const cx = CONFIG.canvasWidth / 2;
+                    const cy = CONFIG.canvasHeight / 2;
+                    for (let i = 0; i < this.targetSeeds; i++) {
+                        const angle = Math.random() * Math.PI * 2;
+                        const dist = Math.random() * 60 + 20;
+                        this.seeds.push({
+                            x: cx + Math.cos(angle) * dist,
+                            y: cy + Math.sin(angle) * dist,
+                            removed: false
+                        });
+                    }
+                },
+                check: function(x, y) {
+                    for (let seed of this.seeds) {
+                        if (!seed.removed && Math.hypot(seed.x - x, seed.y - y) < 10) {
+                            seed.removed = true;
+                            this.removedSeeds++;
+                            playSound('pop');
+                            createParticles(seed.x, seed.y, '#FFD700', 8); // 籽粒子
+                            return this.removedSeeds >= this.targetSeeds;
+                        }
+                    }
+                    return false;
+                },
+                draw: function(ctx) {
+                    const cx = CONFIG.canvasWidth / 2;
+                    const cy = CONFIG.canvasHeight / 2;
+                    
+                    // 绘制草莓
+                    ctx.fillStyle = '#FF6B6B';
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, 80, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // 绘制籽
+                    this.seeds.forEach(seed => {
+                        if (!seed.removed) {
+                            ctx.fillStyle = '#FFD700';
+                            ctx.beginPath();
+                            ctx.arc(seed.x, seed.y, 4, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+                    });
+                    
+                    // 进度提示
+                    ctx.fillStyle = '#fff';
+                    ctx.font = '20px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`${this.removedSeeds}/${this.targetSeeds}`, cx, cy + 110);
+                }
+            },
+            {
+                id: 'cake',
+                name: '给蛋糕裱花',
+                emoji: '🎂',
+                targetCoverage: 0.8,
+                init: function() {
+                    this.path = [];
+                    this.coverage = 0;
+                    // 生成虚线路径（心形）
+                    this.guidePath = [];
+                    const cx = CONFIG.canvasWidth / 2;
+                    const cy = CONFIG.canvasHeight / 2;
+                    for (let i = 0; i < 100; i++) {
+                        const t = (i / 100) * Math.PI * 2;
+                        const x = cx + 80 * Math.sin(t) * Math.sin(t) * Math.sin(t);
+                        const y = cy - 70 * Math.cos(t) + 25 * Math.cos(2 * t) + 10 * Math.cos(3 * t) + 5 * Math.cos(4 * t);
+                        this.guidePath.push({ x, y });
+                    }
+                    this.lastPoint = null;
+                },
+                check: function(x, y) {
+                    if (this.lastPoint) {
+                        const dist = Math.hypot(x - this.lastPoint.x, y - this.lastPoint.y);
+                        if (dist > 5) {
+                            this.path.push({ x, y });
+                            this.coverage = Math.min(this.path.length / 200, 1);
+                            this.lastPoint = { x, y };
+                            if (this.coverage >= this.targetCoverage) {
+                                return true;
+                            }
+                        }
+                    } else {
+                        this.lastPoint = { x, y };
+                        this.path.push({ x, y });
+                    }
+                    return false;
+                },
+                draw: function(ctx) {
+                    const cx = CONFIG.canvasWidth / 2;
+                    const cy = CONFIG.canvasHeight / 2;
+                    
+                    // 绘制蛋糕底
+                    ctx.fillStyle = '#FFE4B5';
+                    ctx.fillRect(cx - 100, cy - 50, 200, 100);
+                    ctx.strokeStyle = '#D2B48C';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(cx - 100, cy - 50, 200, 100);
+                    
+                    // 绘制虚线引导
+                    ctx.strokeStyle = '#DDD';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([5, 5]);
+                    ctx.beginPath();
+                    this.guidePath.forEach((p, i) => {
+                        if (i === 0) ctx.moveTo(p.x, p.y);
+                        else ctx.lineTo(p.x, p.y);
+                    });
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                    
+                    // 绘制奶油路径
+                    if (this.path.length > 1) {
+                        ctx.strokeStyle = '#FFF';
+                        ctx.lineWidth = 8;
+                        ctx.lineCap = 'round';
+                        ctx.lineJoin = 'round';
+                        ctx.beginPath();
+                        this.path.forEach((p, i) => {
+                            if (i === 0) ctx.moveTo(p.x, p.y);
+                            else ctx.lineTo(p.x, p.y);
+                        });
+                        ctx.stroke();
+                    }
+                    
+                    // 进度提示
+                    ctx.fillStyle = '#333';
+                    ctx.font = '20px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`${Math.floor(this.coverage * 100)}%`, cx, cy + 80);
+                }
+            },
+            {
+                id: 'bread',
+                name: '给面包片涂黄油',
+                emoji: '🧈',
+                targetCoverage: 0.7,
+                init: function() {
+                    this.coverage = [];
+                    this.lastPoint = null;
+                },
+                check: function(x, y) {
+                    const cx = CONFIG.canvasWidth / 2;
+                    const cy = CONFIG.canvasHeight / 2;
+                    const w = 180, h = 180;
+                    
+                    if (Math.abs(x - cx) < w / 2 && Math.abs(y - cy) < h / 2) {
+                        this.coverage.push({ x, y });
+                        this.lastPoint = { x, y };
+                        
+                        // 简单估算覆盖率
+                        const coverageRate = Math.min(this.coverage.length / 300, 1);
+                        if (coverageRate >= this.targetCoverage) {
+                            return true;
+                        }
+                    }
+                    return false;
+                },
+                draw: function(ctx) {
+                    const cx = CONFIG.canvasWidth / 2;
+                    const cy = CONFIG.canvasHeight / 2;
+                    const w = 180, h = 180;
+                    
+                    // 绘制面包
+                    ctx.fillStyle = '#F5DEB3';
+                    ctx.fillRect(cx - w / 2, cy - h / 2, w, h);
+                    ctx.strokeStyle = '#D2B48C';
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(cx - w / 2, cy - h / 2, w, h);
+                    
+                    // 绘制黄油涂抹
+                    ctx.fillStyle = 'rgba(255, 215, 0, 0.6)';
+                    this.coverage.forEach(point => {
+                        ctx.beginPath();
+                        ctx.arc(point.x, point.y, 10, 0, Math.PI * 2);
+                        ctx.fill();
+                    });
+                    
+                    // 进度提示
+                    const coverageRate = Math.min(this.coverage.length / 300, 1);
+                    ctx.fillStyle = '#333';
+                    ctx.font = '20px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`${Math.floor(coverageRate * 100)}%`, cx, cy + h / 2 + 30);
+                }
+            },
+            {
+                id: 'orange',
+                name: '剥橘子',
+                emoji: '🍊',
+                targetPeeled: 0.8,
+                init: function() {
+                    this.peelProgress = 0;
+                    this.peeling = false;
+                    this.startY = null;
+                },
+                check: function(x, y) {
+                    const cx = CONFIG.canvasWidth / 2;
+                    const cy = CONFIG.canvasHeight / 2;
+                    const radius = 80;
+                    const dist = Math.hypot(x - cx, y - cy);
+                    
+                    if (dist < radius + 20) {
+                        if (!this.peeling) {
+                            this.peeling = true;
+                            this.startY = y;
+                        } else if (this.startY !== null) {
+                            const peelDist = this.startY - y;
+                            if (peelDist > 0) {
+                                this.peelProgress = Math.min(peelDist / 150, 1);
+                                if (this.peelProgress >= this.targetPeeled) {
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                    return false;
+                },
+                draw: function(ctx) {
+                    const cx = CONFIG.canvasWidth / 2;
+                    const cy = CONFIG.canvasHeight / 2;
+                    const radius = 80;
+                    
+                    // 绘制橘子
+                    ctx.fillStyle = '#FF8C00';
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // 绘制剥开的部分
+                    if (this.peelProgress > 0) {
+                        ctx.fillStyle = '#FFA500';
+                        ctx.beginPath();
+                        const peelAngle = this.peelProgress * Math.PI;
+                        ctx.arc(cx, cy, radius * 0.8, -Math.PI / 2, -Math.PI / 2 + peelAngle);
+                        ctx.fill();
+                    }
+                    
+                    // 进度提示
+                    ctx.fillStyle = '#fff';
+                    ctx.font = '20px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`${Math.floor(this.peelProgress * 100)}%`, cx, cy + radius + 30);
+                }
+            }
+        ];
+
+        // ==================== 初始化 ====================
+        function init() {
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            
+            canvas.addEventListener('click', handleClick);
+            canvas.addEventListener('touchstart', handleTouch);
+            canvas.addEventListener('touchmove', handleTouchMove);
+            canvas.addEventListener('touchend', handleTouchEnd);
+            canvas.addEventListener('mousemove', handleMouseMove);
+            canvas.addEventListener('mousedown', handleMouseDown);
+            canvas.addEventListener('mouseup', handleMouseUp);
+            
+            document.getElementById('soundBtn').addEventListener('click', toggleSound);
+            document.getElementById('pauseBtn').addEventListener('click', togglePause);
+        }
+
+        function resizeCanvas() {
+            const targetRatio = CONFIG.canvasWidth / CONFIG.canvasHeight;
+            const windowRatio = window.innerWidth / window.innerHeight;
+            
+            if (windowRatio > targetRatio) {
+                canvas.height = Math.min(window.innerHeight - 200, CONFIG.canvasHeight);
+                canvas.width = canvas.height * targetRatio;
+            } else {
+                canvas.width = Math.min(window.innerWidth - 40, CONFIG.canvasWidth);
+                canvas.height = canvas.width / targetRatio;
+            }
+        }
+
+        // ==================== 游戏逻辑 ====================
+        function startGame() {
+            gameState = 'playing';
+            score = 0;
+            lives = CONFIG.maxLives;
+            combo = 0;
+            updateUI();
+            document.getElementById('startScreen').classList.add('hidden');
+            startNewTask();
+            gameLoop(performance.now());
+        }
+
+        function restartGame() {
+            document.getElementById('gameOverScreen').classList.add('hidden');
+            startGame();
+        }
+
+        function startNewTask() {
+            currentTask = TASKS[Math.floor(Math.random() * TASKS.length)];
+            currentTask.init();
+            taskTimer = CONFIG.taskDuration;
+            updateTaskHint(currentTask.name);
+        }
+
+        function completeTask(perfect = false) {
+            let points = 100;
+            
+            // 速度加成
+            const timeLeft = taskTimer / CONFIG.taskDuration;
+            const speedBonus = 1 + timeLeft * 0.5;
+            points *= speedBonus;
+            
+            // 完美加成
+            if (perfect) points += 50;
+            
+            // Combo 加成
+            combo++;
+            const comboBonus = Math.min(1 + combo * 0.1, 2.0);
+            points *= comboBonus;
+            
+            const finalPoints = Math.floor(points);
+            score += finalPoints;
+            updateUI();
+            showCombo();
+            playSound('success');
+            
+            // 完成特效
+            const cx = CONFIG.canvasWidth / 2;
+            const cy = CONFIG.canvasHeight / 2;
+            createParticles(cx, cy, '#FFD700', 20);
+            createParticles(cx, cy, '#FF6B6B', 15);
+            showFloatingText(cx, cy - 50, `+${finalPoints}`, '#FFD700');
+            if (combo >= 2) showFloatingText(cx, cy - 80, `x${combo} COMBO!`, '#FF6B6B');
+            
+            setTimeout(() => startNewTask(), 800);
+        }
+
+        function failTask() {
+            lives--;
+            combo = 0;
+            updateUI();
+            playSound('fail');
+            
+            if (lives <= 0) {
+                gameOver();
+            } else {
+                setTimeout(() => startNewTask(), 500);
+            }
+        }
+
+        function gameOver() {
+            gameState = 'gameover';
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('gameOverScreen').classList.remove('hidden');
+        }
+
+        function update(deltaTime) {
+            if (gameState !== 'playing') return;
+            
+            taskTimer -= deltaTime;
+            updateTimer();
+            updateParticles(deltaTime); // 更新粒子
+            
+            if (taskTimer <= 0) {
+                failTask();
+            }
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (gameState !== 'playing' || !currentTask) return;
+            
+            // 绘制当前任务
+            ctx.save();
+            const scaleX = canvas.width / CONFIG.canvasWidth;
+            const scaleY = canvas.height / CONFIG.canvasHeight;
+            ctx.scale(scaleX, scaleY);
+            currentTask.draw(ctx);
+            drawParticles(ctx); // 绘制粒子
+            ctx.restore();
+        }
+
+        function gameLoop(timestamp) {
+            const deltaTime = (timestamp - lastTime) / 1000;
+            lastTime = timestamp;
+            
+            update(deltaTime);
+            render();
+            
+            requestAnimationFrame(gameLoop);
+        }
+
+        // ==================== 输入处理 ====================
+        let isDragging = false;
+
+        function getCanvasPos(clientX, clientY) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: (clientX - rect.left) * (CONFIG.canvasWidth / canvas.width),
+                y: (clientY - rect.top) * (CONFIG.canvasHeight / canvas.height)
+            };
+        }
+
+        function handleClick(e) {
+            if (gameState !== 'playing' || !currentTask) return;
+            const pos = getCanvasPos(e.clientX, e.clientY);
+            
+            // 点击类任务
+            if (['cracker', 'cookie', 'strawberry'].includes(currentTask.id)) {
+                if (currentTask.check(pos.x, pos.y)) {
+                    completeTask(true);
+                }
+            }
+        }
+
+        function handleMouseDown(e) {
+            if (gameState !== 'playing' || !currentTask) return;
+            isDragging = true;
+            const pos = getCanvasPos(e.clientX, e.clientY);
+            
+            // 拖拽类任务
+            if (['cake', 'bread', 'orange'].includes(currentTask.id)) {
+                if (currentTask.check(pos.x, pos.y)) {
+                    completeTask(true);
+                }
+            }
+        }
+
+        function handleMouseMove(e) {
+            if (!isDragging || gameState !== 'playing' || !currentTask) return;
+            const pos = getCanvasPos(e.clientX, e.clientY);
+            
+            if (['cake', 'bread', 'orange'].includes(currentTask.id)) {
+                if (currentTask.check(pos.x, pos.y)) {
+                    completeTask(true);
+                }
+            }
+        }
+
+        function handleMouseUp(e) {
+            isDragging = false;
+            if (currentTask && currentTask.id === 'orange') {
+                currentTask.peeling = false;
+                currentTask.startY = null;
+            }
+        }
+
+        function handleTouch(e) {
+            e.preventDefault();
+            if (gameState !== 'playing' || !currentTask) return;
+            
+            const touch = e.touches[0];
+            const pos = getCanvasPos(touch.clientX, touch.clientY);
+            
+            if (['cracker', 'cookie', 'strawberry'].includes(currentTask.id)) {
+                if (currentTask.check(pos.x, pos.y)) {
+                    completeTask(true);
+                }
+            }
+            if (['cake', 'bread', 'orange'].includes(currentTask.id)) {
+                isDragging = true;
+                if (currentTask.check(pos.x, pos.y)) {
+                    completeTask(true);
+                }
+            }
+        }
+
+        function handleTouchMove(e) {
+            e.preventDefault();
+            if (!isDragging || gameState !== 'playing' || !currentTask) return;
+            const touch = e.touches[0];
+            const pos = getCanvasPos(touch.clientX, touch.clientY);
+            
+            if (['cake', 'bread', 'orange'].includes(currentTask.id)) {
+                if (currentTask.check(pos.x, pos.y)) {
+                    completeTask(true);
+                }
+            }
+        }
+
+        function handleTouchEnd(e) {
+            e.preventDefault();
+            isDragging = false;
+            if (currentTask && currentTask.id === 'orange') {
+                currentTask.peeling = false;
+                currentTask.startY = null;
+            }
+        }
+
+        // ==================== UI 更新 ====================
+        function updateUI() {
+            document.getElementById('score').textContent = score;
+            
+            const heartsDiv = document.getElementById('hearts');
+            heartsDiv.innerHTML = '';
+            for (let i = 0; i < CONFIG.maxLives; i++) {
+                const heart = document.createElement('span');
+                heart.className = 'heart';
+                heart.textContent = i < lives ? '❤️' : '🖤';
+                heartsDiv.appendChild(heart);
+            }
+        }
+
+        function updateTimer() {
+            const timerEl = document.getElementById('timer');
+            timerEl.textContent = Math.ceil(taskTimer) + 's';
+            
+            timerEl.classList.remove('warning', 'danger');
+            if (taskTimer < 10) {
+                timerEl.classList.add('danger');
+            } else if (taskTimer < 20) {
+                timerEl.classList.add('warning');
+            }
+        }
+
+        function updateTaskHint(text) {
+            document.getElementById('taskHint').textContent = text;
+        }
+
+        function showCombo() {
+            if (combo < 2) return;
+            const comboEl = document.getElementById('combo');
+            comboEl.textContent = `Combo x${combo}!`;
+            comboEl.classList.remove('show');
+            void comboEl.offsetWidth; // 触发重排
+            comboEl.classList.add('show');
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            document.getElementById('soundBtn').textContent = soundEnabled ? '🔊' : '🔇';
+        }
+
+        function togglePause() {
+            if (gameState === 'playing') {
+                gameState = 'paused';
+                document.getElementById('pauseBtn').textContent = '▶️';
+            } else if (gameState === 'paused') {
+                gameState = 'playing';
+                document.getElementById('pauseBtn').textContent = '⏸';
+            }
+        }
+
+        // ==================== 音效 ====================
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playSound(type) {
+            if (!soundEnabled) return;
+            initAudio();
+            
+            switch(type) {
+                case 'pop': {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.frequency.setValueAtTime(800 + Math.random() * 200, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.1);
+                    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                    osc.start(audioCtx.currentTime);
+                    osc.stop(audioCtx.currentTime + 0.1);
+                    break;
+                }
+                case 'plop': {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.15);
+                    gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+                    osc.start(audioCtx.currentTime);
+                    osc.stop(audioCtx.currentTime + 0.15);
+                    break;
+                }
+                case 'success': {
+                    // 三连音效
+                    [523, 659, 784].forEach((freq, i) => {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+                        osc.type = 'sine';
+                        osc.frequency.value = freq;
+                        const t = audioCtx.currentTime + i * 0.1;
+                        gain.gain.setValueAtTime(0.2, t);
+                        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
+                        osc.start(t);
+                        osc.stop(t + 0.2);
+                    });
+                    break;
+                }
+                case 'fail': {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.4);
+                    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+                    osc.start(audioCtx.currentTime);
+                    osc.stop(audioCtx.currentTime + 0.4);
+                    break;
+                }
+            }
+        }
+
+        // ==================== 启动 ====================
+        init();
+    </script>
+</body>
+</html>

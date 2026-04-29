@@ -1,0 +1,89 @@
+{
+  "game_name": "摸鱼工坊",
+  "style": "cartoon",
+  "view": "front_view",
+  "color_palette": {
+    "background": "#FFF8E7",
+    "primary": "#FFB6C1",
+    "secondary": "#87CEEB",
+    "accent": "#FFD700"
+  },
+  "elements": {
+    "soda_cracker": {
+      "base_description": "square soda cracker biscuit",
+      "states": {
+        "blank": "cartoon style cute square soda cracker biscuit, light beige color, smooth flat surface, no holes, front view, soft lighting, clean edges, simple details, game asset style, white background, 512x512px",
+        "with_holes": "cartoon style cute square soda cracker biscuit, light beige color, with evenly distributed small round holes, front view, soft lighting, clean edges, simple details, game asset style, white background, 512x512px"
+      }
+    },
+    "cookie": {
+      "base_description": "round cookie dough",
+      "states": {
+        "plain": "cartoon style cute round cookie dough, light brown color, smooth surface, no chocolate chips, front view, soft lighting, clean edges, simple details, game asset style, white background, 512x512px",
+        "with_chips": "cartoon style cute round cookie with chocolate chips, light brown dough, dark brown chocolate chips scattered on surface, front view, soft lighting, clean edges, simple details, game asset style, white background, 512x512px"
+      }
+    },
+    "strawberry": {
+      "base_description": "fresh strawberry",
+      "states": {
+        "with_seeds": "cartoon style cute fresh strawberry, bright red color, with yellow seeds all over surface, green leaves on top, front view, soft lighting, glossy surface, simple details, game asset style, white background, 512x512px",
+        "seedless": "cartoon style cute fresh strawberry, bright red color, smooth surface without seeds, green leaves on top, front view, soft lighting, glossy surface, simple details, game asset style, white background, 512x512px"
+      }
+    },
+    "cake_slice": {
+      "base_description": "cake slice for decoration",
+      "states": {
+        "plain": "cartoon style cute triangular cake slice, light pink frosting, smooth surface, no decoration, side view, soft lighting, clean edges, simple details, game asset style, white background, 512x512px",
+        "decorated": "cartoon style cute triangular cake slice, light pink frosting, with white cream piping decoration on top, side view, soft lighting, clean edges, simple details, game asset style, white background, 512x512px"
+      }
+    },
+    "bread_slice": {
+      "base_description": "bread slice",
+      "states": {
+        "plain": "cartoon style cute square bread slice, light beige color, porous texture, no butter, front view, soft lighting, clean edges, simple details, game asset style, white background, 512x512px",
+        "buttered": "cartoon style cute square bread slice, light beige color, with golden yellow butter spread on surface, glossy sheen, front view, soft lighting, clean edges, simple details, game asset style, white background, 512x512px"
+      }
+    },
+    "orange": {
+      "base_description": "orange fruit",
+      "states": {
+        "whole": "cartoon style cute whole orange, bright orange color, with peel texture, front view, soft lighting, round shape, simple details, game asset style, white background, 512x512px",
+        "peeled": "cartoon style cute peeled orange, bright orange segments visible, no peel, front view, soft lighting, juicy appearance, simple details, game asset style, white background, 512x512px"
+      }
+    },
+    "ui_elements": {
+      "heart_full": "cartoon style cute red heart icon, full health, glossy surface, simple design, game UI style, transparent background, 128x128px",
+      "heart_empty": "cartoon style cute gray heart icon, empty health, simple design, game UI style, transparent background, 128x128px",
+      "checkmark": "cartoon style cute green checkmark icon, success symbol, bold lines, game UI style, transparent background, 128x128px",
+      "cross": "cartoon style cute red cross icon, failure symbol, bold lines, game UI style, transparent background, 128x128px",
+      "star": "cartoon style cute golden star icon, shiny surface, game UI style, transparent background, 128x128px"
+    },
+    "particles": {
+      "flour_dust": "small white flour dust particles, scattered effect, semi-transparent, various sizes, PNG with alpha channel, 256x256px",
+      "chocolate_chip": "small dark brown chocolate chip, round shape, cartoon style, game asset, transparent background, 64x64px",
+      "seed": "tiny yellow strawberry seed, oval shape, cartoon style, game asset, transparent background, 32x32px",
+      "sparkle": "golden sparkle particle, star-shaped, glowing effect, semi-transparent, PNG with alpha channel, 64x64px",
+      "water_drop": "small water droplet, transparent blue, glossy, cartoon style, PNG with alpha channel, 48x48px"
+    },
+    "tools": {
+      "fork": "cartoon style cute fork tool, silver color, simple design, front view, game asset style, transparent background, 128x128px",
+      "knife": "cartoon style cute butter knife, silver blade with yellow butter, simple design, game asset style, transparent background, 128x128px"
+    }
+  },
+  "generation_notes": {
+    "priority": [
+      "soda_cracker states",
+      "cookie states",
+      "strawberry states",
+      "cake_slice states",
+      "bread_slice states",
+      "orange states",
+      "ui_elements",
+      "particles",
+      "tools"
+    ],
+    "fallback": "If AI generation fails, use Python Pillow to draw simplified cartoon versions",
+    "style_consistency": "All elements must use the same cartoon style with soft lighting and clean edges",
+    "background": "All game objects use white background, UI elements and particles use transparent background"
+  }
+}
